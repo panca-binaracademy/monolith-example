@@ -1,30 +1,35 @@
-// PASSPORT PART
-
+const bcrypt = require('bcrypt')
+const passportInit = require('../passport-config')
 const passport = require('passport')
-const LocalStrategy = require('passport-local').Strategy
-const User = require('../models/user')
 
-const authenticating = new LocalStrategy(
-(username, password, done) => {
-  User.findOne({ username })
-    .then(user => {
-      if (!user) return done(null, false)
-      if (!user.verifyPassword(password)) return done(null, false) 
-      return done(null, user)
-    })
-})
-passport.use(authenticating)
-
-passport.serializeUser((user, done) => done(null, user.id))
-passport.deserializeUser(async (id, done) => done(null, await User.findById(id)))
-module.exports = passport
-
-// CONTROLLER PART
+passportInit(
+  passport,
+  username => users.find( user => user.username === username),
+  id => users.find( user => user.id === id),
+)
 
 module.exports = {
+  register: (req,res) => res.render('auth/register'),
   login: (req,res) => res.render('auth/login'),
-  password: passport.authenticate('local', {
-    successRedirect: '/',
-    failureRedirect: '/auth/login'
-  })
+  post: {
+    register: async (req,res) => {
+      try {
+        const hashedPassword = await bcrypt.hash(req.body.password, 10)
+        users.push({
+          id: Date.now().toString(),
+          username: req.body.username,
+          password: hashedPassword
+        })
+        res.redirect('/auth/login')
+      } catch {
+        res.redirect('/auth/register')
+      }
+      console.log(users)
+    },
+    login: passport.authenticate('local', {
+      successRedirect: '/',
+      failureRedirect: '/auth/login',
+      failureFlash: true
+    })
+  }
 }
